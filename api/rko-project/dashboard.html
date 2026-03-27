@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Дашборд — Команда трафика</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  :root {
+    --red: #E8001A;
+    --dark: #0D0D0D;
+    --mid: #1A1A1A;
+    --border: #2A2A2A;
+    --muted: #555;
+    --text: #E8E8E8;
+    --dim: #888;
+    --gold: #C8A84B;
+    --success: #00C853;
+    --blue: #2196F3;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--dark);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height: 100vh;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(232,0,26,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(232,0,26,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ===== LOGIN SCREEN ===== */
+  #login-screen {
+    position: fixed;
+    inset: 0;
+    background: var(--dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  .login-box {
+    width: 380px;
+    border: 1px solid var(--border);
+    background: var(--mid);
+    padding: 48px 40px;
+    position: relative;
+  }
+
+  .login-box::before {
+    content: 'ДОСТУП ЗАКРЫТ';
+    position: absolute;
+    top: -1px; left: 40px;
+    background: var(--red);
+    color: #fff;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    padding: 5px 12px;
+  }
+
+  .login-title {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .login-sub {
+    color: var(--dim);
+    font-size: 12px;
+    margin-bottom: 32px;
+  }
+
+  .login-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .login-field label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  .login-field input {
+    background: var(--dark);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 15px;
+    padding: 13px 16px;
+    outline: none;
+    border-radius: 2px;
+    transition: border-color 0.2s;
+  }
+
+  .login-field input:focus { border-color: var(--red); }
+
+  .login-btn {
+    width: 100%;
+    background: var(--red);
+    border: none;
+    color: #fff;
+    font-family: 'Unbounded', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 15px;
+    cursor: pointer;
+    border-radius: 2px;
+    margin-top: 8px;
+    transition: opacity 0.2s;
+  }
+
+  .login-btn:hover { opacity: 0.9; }
+
+  .login-error {
+    margin-top: 12px;
+    color: #ff6b6b;
+    font-size: 12px;
+    text-align: center;
+    display: none;
+  }
+
+  /* ===== MAIN APP ===== */
+  #app { display: none; position: relative; z-index: 5; }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 18px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .logo {
+    font-family: 'Unbounded', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+  }
+
+  .logo span { color: var(--red); }
+
+  .header-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .btn-nav {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--dim);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 8px 16px;
+    cursor: pointer;
+    border-radius: 2px;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+
+  .btn-nav:hover { border-color: var(--text); color: var(--text); }
+
+  .btn-logout {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 8px 14px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+
+  .btn-logout:hover { border-color: var(--red); color: var(--red); }
+
+  /* ===== CONTENT ===== */
+  .content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px;
+  }
+
+  .page-title {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .page-sub {
+    color: var(--dim);
+    font-size: 13px;
+    margin-bottom: 36px;
+  }
+
+  /* ===== STAT CARDS ===== */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .stat-card {
+    background: var(--mid);
+    border: 1px solid var(--border);
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--red);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s ease;
+  }
+
+  .stat-card:hover::after { transform: scaleX(1); }
+
+  .stat-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin-bottom: 12px;
+  }
+
+  .stat-value {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 36px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--text);
+  }
+
+  .stat-value.red { color: var(--red); }
+  .stat-value.green { color: var(--success); }
+  .stat-value.gold { color: var(--gold); }
+
+  .stat-sub {
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* ===== CHART ===== */
+  .chart-section {
+    background: var(--mid);
+    border: 1px solid var(--border);
+    padding: 28px;
+    margin-bottom: 28px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .section-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  .chart-wrap { height: 200px; position: relative; }
+
+  /* ===== TABLE ===== */
+  .table-section {
+    background: var(--mid);
+    border: 1px solid var(--border);
+  }
+
+  .table-toolbar {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .filter-group {
+    display: flex;
+    gap: 8px;
+  }
+
+  .filter-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--dim);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 7px 14px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+
+  .filter-btn.active { background: var(--red); border-color: var(--red); color: #fff; }
+  .filter-btn:not(.active):hover { border-color: var(--text); color: var(--text); }
+
+  .btn-clear {
+    background: transparent;
+    border: 1px solid #3a1010;
+    color: #aa3333;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 7px 14px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+
+  .btn-clear:hover { border-color: var(--red); color: var(--red); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  thead th {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--dim);
+    text-align: left;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+
+  tbody td {
+    padding: 14px 16px;
+    font-size: 13px;
+    vertical-align: middle;
+  }
+
+  .td-time {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--dim);
+    white-space: nowrap;
+  }
+
+  .badge {
+    display: inline-block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 2px;
+  }
+
+  .badge-rko { background: rgba(232,0,26,0.15); color: #ff6b6b; border: 1px solid rgba(232,0,26,0.3); }
+  .badge-reg { background: rgba(33,150,243,0.12); color: #64b5f6; border: 1px solid rgba(33,150,243,0.3); }
+
+  .td-name { font-weight: 500; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .td-phone { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--dim); }
+
+  .td-link a {
+    color: var(--success);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    text-decoration: none;
+    max-width: 180px;
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .td-link a:hover { text-decoration: underline; }
+
+  .no-data {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .no-data-icon {
+    font-size: 32px;
+    margin-bottom: 12px;
+    opacity: 0.3;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    .stat-grid { grid-template-columns: 1fr 1fr; }
+    header, .content { padding-left: 20px; padding-right: 20px; }
+    table { font-size: 12px; }
+  }
+
+  @media (max-width: 600px) {
+    .stat-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-title">Личный кабинет</div>
+    <div class="login-sub">Введите пароль для доступа к статистике</div>
+    <div class="login-field">
+      <label>Пароль</label>
+      <input type="password" id="pwd-input" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="login-btn" onclick="doLogin()">Войти →</button>
+    <div class="login-error" id="login-error">Неверный пароль</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <header>
+    <div class="logo">Команда<span> </span>трафика <span style="color:var(--dim);font-weight:300;font-size:11px">/ Дашборд</span></div>
+    <div class="header-actions">
+      <a href="/" class="btn-nav">← Формы</a>
+      <button class="btn-logout" onclick="logout()">Выйти</button>
+    </div>
+  </header>
+
+  <div class="content">
+    <div class="page-title">Статистика заявок</div>
+    <div class="page-sub" id="last-updated">Загрузка...</div>
+
+    <!-- STAT CARDS -->
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">Всего заявок</div>
+        <div class="stat-value" id="s-total">0</div>
+        <div class="stat-sub">за всё время</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Сегодня</div>
+        <div class="stat-value green" id="s-today">0</div>
+        <div class="stat-sub" id="s-today-sub">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">РКО Альфа-Банк</div>
+        <div class="stat-value red" id="s-rko">0</div>
+        <div class="stat-sub">заявок</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Регистрация бизнеса</div>
+        <div class="stat-value gold" id="s-reg">0</div>
+        <div class="stat-sub">заявок</div>
+      </div>
+    </div>
+
+    <!-- CHART -->
+    <div class="chart-section">
+      <div class="section-header">
+        <div class="section-title">Заявки за последние 14 дней</div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chart"></canvas>
+      </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-section">
+      <div class="table-toolbar">
+        <div class="filter-group">
+          <button class="filter-btn active" onclick="setFilter('all',this)">Все</button>
+          <button class="filter-btn" onclick="setFilter('rko',this)">РКО</button>
+          <button class="filter-btn" onclick="setFilter('reg',this)">Регистрация</button>
+        </div>
+        <button class="btn-clear" onclick="clearAll()">Очистить всё</button>
+      </div>
+      <div id="table-wrap">
+        <div class="no-data"><div class="no-data-icon">📋</div>Заявок пока нет. Создайте первую через форму.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== ПАРОЛЬ =====
+const PASSWORD = 'traffic2024';
+
+function doLogin() {
+  const pwd = document.getElementById('pwd-input').value;
+  if (pwd === PASSWORD) {
+    sessionStorage.setItem('dash_auth', '1');
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    initDashboard();
+  } else {
+    document.getElementById('login-error').style.display = 'block';
+    document.getElementById('pwd-input').value = '';
+    document.getElementById('pwd-input').focus();
+  }
+}
+
+function logout() {
+  sessionStorage.removeItem('dash_auth');
+  location.reload();
+}
+
+// Проверяем сессию
+if (sessionStorage.getItem('dash_auth') === '1') {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+}
+
+// ===== ДАННЫЕ =====
+function getLeads() {
+  try { return JSON.parse(localStorage.getItem('rko_leads') || '[]'); } catch(e) { return []; }
+}
+
+let currentFilter = 'all';
+let chartInstance = null;
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTable();
+}
+
+function clearAll() {
+  if (confirm('Удалить все заявки из истории? Это действие нельзя отменить.')) {
+    localStorage.removeItem('rko_leads');
+    initDashboard();
+  }
+}
+
+// ===== ИНИЦИАЛИЗАЦИЯ =====
+function initDashboard() {
+  const leads = getLeads();
+  renderStats(leads);
+  renderChart(leads);
+  renderTable();
+  const now = new Date();
+  document.getElementById('last-updated').textContent =
+    `Обновлено: ${now.toLocaleDateString('ru-RU')} в ${now.toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'})}`;
+}
+
+// ===== СТАТИСТИКА =====
+function renderStats(leads) {
+  const today = new Date().toDateString();
+  const todayLeads = leads.filter(l => new Date(l.ts).toDateString() === today);
+
+  document.getElementById('s-total').textContent = leads.length;
+  document.getElementById('s-today').textContent = todayLeads.length;
+  document.getElementById('s-today-sub').textContent = todayLeads.length === 1 ? '1 заявка' : `${todayLeads.length} заявок`;
+  document.getElementById('s-rko').textContent = leads.filter(l => l.type === 'rko').length;
+  document.getElementById('s-reg').textContent = leads.filter(l => l.type === 'reg').length;
+}
+
+// ===== ГРАФИК =====
+function renderChart(leads) {
+  const days = [];
+  const rkoData = [];
+  const regData = [];
+
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const ds = d.toDateString();
+    days.push(d.toLocaleDateString('ru-RU', {day:'numeric', month:'short'}));
+    rkoData.push(leads.filter(l => new Date(l.ts).toDateString() === ds && l.type === 'rko').length);
+    regData.push(leads.filter(l => new Date(l.ts).toDateString() === ds && l.type === 'reg').length);
+  }
+
+  const ctx = document.getElementById('chart').getContext('2d');
+  if (chartInstance) chartInstance.destroy();
+
+  chartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: days,
+      datasets: [
+        {
+          label: 'РКО Альфа-Банк',
+          data: rkoData,
+          backgroundColor: 'rgba(232,0,26,0.7)',
+          borderRadius: 2,
+        },
+        {
+          label: 'Регистрация бизнеса',
+          data: regData,
+          backgroundColor: 'rgba(33,150,243,0.6)',
+          borderRadius: 2,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: { color: '#888', font: { family: 'IBM Plex Mono', size: 10 }, boxWidth: 12 }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#555', font: { family: 'IBM Plex Mono', size: 10 } },
+          grid: { color: 'rgba(255,255,255,0.04)' }
+        },
+        y: {
+          ticks: { color: '#555', font: { family: 'IBM Plex Mono', size: 10 }, stepSize: 1 },
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          beginAtZero: true
+        }
+      }
+    }
+  });
+}
+
+// ===== ТАБЛИЦА =====
+function renderTable() {
+  const leads = getLeads();
+  const filtered = currentFilter === 'all' ? leads : leads.filter(l => l.type === currentFilter);
+  const wrap = document.getElementById('table-wrap');
+
+  if (filtered.length === 0) {
+    wrap.innerHTML = `<div class="no-data"><div class="no-data-icon">📋</div>${leads.length === 0 ? 'Заявок пока нет. Создайте первую через форму.' : 'Нет заявок по выбранному фильтру.'}</div>`;
+    return;
+  }
+
+  const rows = [...filtered].reverse().map(l => {
+    const d = new Date(l.ts);
+    const dateStr = d.toLocaleDateString('ru-RU', {day:'2-digit',month:'2-digit',year:'numeric'});
+    const timeStr = d.toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'});
+    const name = l.type === 'rko' ? (l.data.company_name || '—') : (l.data.full_name || '—');
+    const phone = l.data.phone || '—';
+    const city = l.data.city || '—';
+    const badge = l.type === 'rko'
+      ? '<span class="badge badge-rko">РКО</span>'
+      : '<span class="badge badge-reg">Рег. бизнеса</span>';
+    const linkHtml = l.link
+      ? `<a href="${l.link}" target="_blank">${l.link}</a>`
+      : '<span style="color:var(--muted);font-size:11px">—</span>';
+
+    return `<tr>
+      <td class="td-time">${dateStr}<br>${timeStr}</td>
+      <td>${badge}</td>
+      <td class="td-name">${name}</td>
+      <td class="td-phone">${phone}</td>
+      <td>${city}</td>
+      <td class="td-link">${linkHtml}</td>
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `<table>
+    <thead>
+      <tr>
+        <th>Дата / Время</th>
+        <th>Оффер</th>
+        <th>Имя / Компания</th>
+        <th>Телефон</th>
+        <th>Город</th>
+        <th>Ссылка</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+// Инициализируем если авторизованы
+if (sessionStorage.getItem('dash_auth') === '1') initDashboard();
+</script>
+</body>
+</html>
