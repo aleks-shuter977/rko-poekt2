@@ -605,7 +605,10 @@
 
 <header>
   <div class="logo">Команда<span> </span>трафика</div>
-  <div class="header-badge">АВТОМАТИЧЕСКАЯ ГЕНЕРАЦИЯ ССЫЛОК</div>
+  <div style="display:flex;gap:12px;align-items:center">
+    <a href="/dashboard.html" style="background:transparent;border:1px solid #2A2A2A;color:#888;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;padding:8px 16px;text-decoration:none;border-radius:2px;transition:all 0.2s" onmouseover="this.style.color='#E8E8E8';this.style.borderColor='#E8E8E8'" onmouseout="this.style.color='#888';this.style.borderColor='#2A2A2A'">Дашборд →</a>
+    <div class="header-badge">АВТОМАТИЧЕСКАЯ ГЕНЕРАЦИЯ ССЫЛОК</div>
+  </div>
 </header>
 
 <section class="hero">
@@ -870,11 +873,17 @@ async function submitForm(prefix) {
     if (response.ok) {
       const link = data?.data?.link || data?.link || data?.url || data?.referral_url
         || data?.data?.url || data?.data?.referral_url
-        || `https://rko-partner.com/go/${data?.data?.id || data?.id || 'новая-заявка'}`;
+        || `https://rko-partner.com/go/${data?.data?.id || data?.id || ''}`;
 
       const linkEl = document.getElementById('link-' + prefix);
       linkEl.value = link;
       linkEl.classList.add('has-link');
+
+      // Сохраняем в историю дашборда
+      const leads = JSON.parse(localStorage.getItem('rko_leads') || '[]');
+      leads.push({ ts: Date.now(), type: prefix, data: payload, link: link });
+      localStorage.setItem('rko_leads', JSON.stringify(leads));
+
     } else {
       const msg = data?.message || data?.error || data?.errors?.[0]?.message || `Ошибка API: ${response.status}`;
       errorBox.textContent = msg;
