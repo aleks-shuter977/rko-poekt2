@@ -859,7 +859,11 @@ async function submitForm(prefix) {
     const response = await fetch('/api/proxy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: TOKENS[prefix], payload })
+      body: JSON.stringify({
+        token: TOKENS[prefix],
+        product_id: prefix === 'rko' ? 519 : 520,
+        payload
+      })
     });
 
     const text = await response.text();
@@ -871,9 +875,11 @@ async function submitForm(prefix) {
     debugBox.className = 'debug-box show';
 
     if (response.ok) {
-      const link = data?.data?.link || data?.link || data?.url || data?.referral_url
-        || data?.data?.url || data?.data?.referral_url
-        || `https://rko-partner.com/go/${data?.data?.id || data?.id || ''}`;
+      const orderData = data?.data?.[0] || data?.data || data;
+      const link = orderData?.tracking_url
+        || data?.tracking_url
+        || data?.data?.link || data?.link
+        || '';
 
       const linkEl = document.getElementById('link-' + prefix);
       linkEl.value = link;
